@@ -120,8 +120,8 @@ public class App
 
                     if (!file.exists()) {
                         respondJson(t, 404,
-                                "error", "File does not exist",
-                                "path", uri);
+                            "error", "File does not exist",
+                            "path", uri);
                         return;
                     }
 
