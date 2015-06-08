@@ -1,5 +1,7 @@
 package fi.aalto.legroup.shareserver;
 
+import java.lang.StringBuilder;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.InputStream;
@@ -52,6 +54,59 @@ public class App
             } while (toRead > (long)0);
         }
 
+        protected static void respondJson(HttpExchange t, int code, Object... params) throws IOException {
+
+            StringBuilder builder = new StringBuilder();
+            builder.append('{');
+
+            if (params.length % 2 != 0) {
+                throw new IllegalArgumentException("Expected even number of extra arguments (key/value pairs)");
+            }
+
+            for (int i = 0; i < params.length; i += 2) {
+
+                Object keyObject = params[i];
+                Object valueObject = params[i + 1];
+
+                if (!(keyObject instanceof String)) {
+                    throw new IllegalArgumentException("Expected String key for argument position " + i);
+                }
+
+                builder.append('"');
+                builder.append((String) keyObject);
+                builder.append("\": ");
+
+                if (valueObject instanceof String) {
+                    // Does not escape currently.
+                    builder.append('"');
+                    builder.append((String) valueObject);
+                    builder.append('"');
+                } else if (valueObject instanceof Integer) {
+                    builder.append(valueObject.toString());
+                } else if (valueObject instanceof Boolean) {
+                    builder.append(valueObject.toString());
+                } else {
+                    throw new IllegalArgumentException("Expected JSON value " + valueObject.toString() + " at argument position " + i);
+                }
+
+                if (i + 2 < params.length) {
+                    builder.append(',');
+                }
+            }
+
+            builder.append('}');
+            builder.append('\n');
+
+            String response = builder.toString();
+
+            Headers headers = t.getResponseHeaders();
+            headers.set("Content-Type", "application/json");
+            t.sendResponseHeaders(code, response.length());
+            OutputStream out = t.getResponseBody();
+            out.write(response.getBytes());
+            out.close();
+        }
+
         public void handle(HttpExchange t) throws IOException {
 
             String uri = t.getRequestURI().toString();
@@ -64,13 +119,9 @@ public class App
                     File file = new File(root + uri);
 
                     if (!file.exists()) {
-                        String response = "{ \"error\": \"Path not found\", \"path\": \"" + uri + "\" }\n";
-                        Headers headers = t.getResponseHeaders();
-                        headers.set("Content-Type", "application/json");
-                        t.sendResponseHeaders(404, response.length());
-                        OutputStream out = t.getResponseBody();
-                        out.write(response.getBytes());
-                        out.close();
+                        respondJson(t, 404,
+                                "error", "File does not exist",
+                                "path", uri);
                         return;
                     }
 
@@ -121,13 +172,9 @@ public class App
                     File path = new File(root + pathname);
 
                     if (!path.exists()) {
-                        String response = "{ \"error\": \"Path not found\", \"path\": \"" + pathname + "\" }\n";
-                        Headers headers = t.getResponseHeaders();
-                        headers.set("Content-Type", "application/json");
-                        t.sendResponseHeaders(404, response.length());
-                        OutputStream out = t.getResponseBody();
-                        out.write(response.getBytes());
-                        out.close();
+                        respondJson(t, 404,
+                            "error", "Path not found",
+                            "path", path);
                         return;
                     }
 
@@ -135,13 +182,9 @@ public class App
 
                     boolean isOverwrite = file.exists();
                     if (isOverwrite && !canOverwrite) {
-                        String response = "{ \"error\": \"File already exits\", \"path\": \"" + uri + "\" }\n";
-                        Headers headers = t.getResponseHeaders();
-                        headers.set("Content-Type", "application/json");
-                        t.sendResponseHeaders(409, response.length());
-                        OutputStream out = t.getResponseBody();
-                        out.write(response.getBytes());
-                        out.close();
+                        respondJson(t, 409,
+                            "error", "File already exists",
+                            "path", uri);
                         return;
                     }
 
@@ -158,25 +201,18 @@ public class App
                     out.close();
                     in.close();
 
-                    String response = "{ \"overwrite\": \"" + (isOverwrite ? "true" : "false") + "\", \"path\": \"" + uri + "\" }\n";
-                    Headers headers = t.getResponseHeaders();
-                    headers.set("Content-Type", "application/json");
                     int status = isOverwrite ? 200 : 201;
-                    t.sendResponseHeaders(status, response.length());
-                    OutputStream rout = t.getResponseBody();
-                    rout.write(response.getBytes());
-                    rout.close();
+                    respondJson(t, status, 
+                        "overwrite", isOverwrite,
+                        "path", uri);
                 }
 
             } else {
-                String response = "{ \"error\": \"Invalid url\", \"url\": \"" + uri + "\" }\n";
-                Headers headers = t.getResponseHeaders();
-                headers.set("Content-Type", "application/json");
-                t.sendResponseHeaders(400, response.length());
-                OutputStream out = t.getResponseBody();
-                out.write(response.getBytes());
-                out.close();
+                respondJson(t, 400,
+                    "error", "Invalid url",
+                    "url", uri);
             }
+
         }
     }
 }
