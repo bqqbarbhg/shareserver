@@ -31,6 +31,27 @@ public class App
 
         private String root = new String("D:/shareserver");
 
+        protected static void blockCopy(OutputStream out, InputStream in, long size) throws IOException {
+
+            int bufferSize = 2048;
+            byte[] buffer = new byte[bufferSize];
+
+            long toRead = size;
+            int numRead;
+            do {
+                int nextRead;
+                if (toRead > (long)bufferSize)
+                    nextRead = bufferSize;
+                else
+                    nextRead = (int)toRead;
+
+                numRead = in.read(buffer, 0, nextRead);
+                toRead -= numRead;
+
+                out.write(buffer, 0, numRead);
+            } while (toRead > (long)0);
+        }
+
         public void handle(HttpExchange t) throws IOException {
 
             String uri = t.getRequestURI().toString();
@@ -74,32 +95,17 @@ public class App
                         out.write(response.getBytes());
                         out.close();
                     } else {
+                        
+                        long contentLength = file.length();
 
                         Headers headers = t.getResponseHeaders();
                         headers.set("Content-Type", "image/jpg");
-                        t.sendResponseHeaders(200, file.length());
+                        t.sendResponseHeaders(200, contentLength);
 
                         FileInputStream in = new FileInputStream(file);
-
-                        int bufferSize = 2048;
-                        byte[] buffer = new byte[bufferSize];
-
                         OutputStream out = t.getResponseBody();
 
-                        long toRead = file.length();
-                        int numRead;
-                        do {
-                            int nextRead;
-                            if (toRead > (long)bufferSize)
-                                nextRead = bufferSize;
-                            else
-                                nextRead = (int)toRead;
-
-                            numRead = in.read(buffer, 0, nextRead);
-                            toRead -= numRead;
-
-                            out.write(buffer, 0, numRead);
-                        } while (toRead > (long)0);
+                        blockCopy(out, in, contentLength);
 
                         out.close();
                         in.close();
@@ -142,28 +148,15 @@ public class App
                     int bufferSize = 2048;
                     byte[] buffer = new byte[bufferSize];
 
-                    FileOutputStream out = new FileOutputStream(file);
                     Headers requestHeaders = t.getRequestHeaders();
                     long contentLength = Long.parseLong(requestHeaders.getFirst("Content-Length"), 10);
                     InputStream in = t.getRequestBody();
+                    FileOutputStream out = new FileOutputStream(file);
 
-                    long toRead = contentLength;
-                    int numRead;
-                    do {
-                        int nextRead;
-                        if (toRead > (long)bufferSize)
-                            nextRead = bufferSize;
-                        else
-                            nextRead = (int)toRead;
+                    blockCopy(out, in, contentLength);
 
-                        numRead = in.read(buffer, 0, nextRead);
-                        toRead -= numRead;
-
-                        out.write(buffer, 0, numRead);
-                    } while (toRead > (long)0);
-
-                    in.close();
                     out.close();
+                    in.close();
 
                     String response = "{ \"overwrite\": \"" + (isOverwrite ? "true" : "false") + "\", \"path\": \"" + uri + "\" }\n";
                     Headers headers = t.getResponseHeaders();
