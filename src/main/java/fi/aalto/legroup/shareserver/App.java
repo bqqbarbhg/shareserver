@@ -202,6 +202,19 @@ public class App
                     respondJson(t, status, 
                         "overwrite", isOverwrite,
                         "path", uri);
+                } else if (method.equals("DELETE")) {
+
+                    File file = new File(root + uri);
+
+                    if (!file.exists()) {
+                        respondJson(t, 404,
+                            "error", "File not found",
+                            "path", uri);
+                    }
+
+                    file.delete();
+                    respondJson(t, 200,
+                        "path", uri);
                 }
 
             } else {
