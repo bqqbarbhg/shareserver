@@ -16,7 +16,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.Headers;
 
 /**
- * Hello world!
+ * Lightweight file server: GET, PUT, POST, DELETE on files, GET to list directories, url = path.
  */
 public class App 
 {
