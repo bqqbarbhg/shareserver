@@ -2,8 +2,10 @@ package fi.aalto.legroup.shareserver;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.InputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.net.InetSocketAddress;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -91,6 +93,75 @@ public class App
                         out.close();
                         in.close();
                     }
+                } else if (method.equals("PUT") || method.equals("POST")) {
+
+                    boolean canOverwrite = method.equals("PUT");
+
+                    int fileIndex = uri.lastIndexOf('/');
+                    String pathname = uri.substring(0, fileIndex);
+                    String filename = uri.substring(fileIndex);
+
+                    File path = new File(root + pathname);
+
+                    if (!path.exists()) {
+                        String response = "{ \"error\": \"Path not found\", \"path\": \"" + pathname + "\" }\n";
+                        Headers headers = t.getResponseHeaders();
+                        headers.set("Content-Type", "application/json");
+                        t.sendResponseHeaders(404, response.length());
+                        OutputStream out = t.getResponseBody();
+                        out.write(response.getBytes());
+                        out.close();
+                        return;
+                    }
+
+                    File file = new File(root + pathname + filename);
+
+                    boolean isOverwrite = file.exists();
+                    if (isOverwrite && !canOverwrite) {
+                        String response = "{ \"error\": \"File already exits\", \"path\": \"" + uri + "\" }\n";
+                        Headers headers = t.getResponseHeaders();
+                        headers.set("Content-Type", "application/json");
+                        t.sendResponseHeaders(409, response.length());
+                        OutputStream out = t.getResponseBody();
+                        out.write(response.getBytes());
+                        out.close();
+                        return;
+                    }
+
+                    int bufferSize = 2048;
+                    byte[] buffer = new byte[bufferSize];
+
+                    FileOutputStream out = new FileOutputStream(file);
+                    Headers requestHeaders = t.getRequestHeaders();
+                    long contentLength = Long.parseLong(requestHeaders.getFirst("Content-Length"), 10);
+                    InputStream in = t.getRequestBody();
+
+                    long toRead = contentLength;
+                    int numRead;
+                    do {
+                        int nextRead;
+                        if (toRead > (long)bufferSize)
+                            nextRead = bufferSize;
+                        else
+                            nextRead = (int)toRead;
+
+                        numRead = in.read(buffer, 0, nextRead);
+                        toRead -= numRead;
+
+                        out.write(buffer, 0, numRead);
+                    } while (toRead > (long)0);
+
+                    in.close();
+                    out.close();
+
+                    String response = "{ \"overwrite\": \"" + (isOverwrite ? "true" : "false") + "\", \"path\": \"" + uri + "\" }\n";
+                    Headers headers = t.getResponseHeaders();
+                    headers.set("Content-Type", "application/json");
+                    int status = isOverwrite ? 200 : 201;
+                    t.sendResponseHeaders(status, response.length());
+                    OutputStream rout = t.getResponseBody();
+                    rout.write(response.getBytes());
+                    rout.close();
                 }
 
             } else {
