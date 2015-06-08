@@ -81,14 +81,25 @@ public class App
 
                         FileInputStream in = new FileInputStream(file);
 
-                        byte[] buffer = new byte[2048];
+                        int bufferSize = 2048;
+                        byte[] buffer = new byte[bufferSize];
 
                         OutputStream out = t.getResponseBody();
+
+                        long toRead = file.length();
                         int numRead;
                         do {
-                            numRead = in.read(buffer);
+                            int nextRead;
+                            if (toRead > (long)bufferSize)
+                                nextRead = bufferSize;
+                            else
+                                nextRead = (int)toRead;
+
+                            numRead = in.read(buffer, 0, nextRead);
+                            toRead -= numRead;
+
                             out.write(buffer, 0, numRead);
-                        } while (numRead > 0);
+                        } while (toRead > (long)0);
 
                         out.close();
                         in.close();
