@@ -3,6 +3,7 @@ package fi.aalto.legroup.shareserver;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.net.InetSocketAddress;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -69,6 +70,24 @@ public class App
                         t.sendResponseHeaders(200, response.length());
                         OutputStream out = t.getResponseBody();
                         out.write(response.getBytes());
+                        out.close();
+                    } else {
+
+                        Headers headers = t.getResponseHeaders();
+                        headers.set("Content-Type", "image/jpg");
+                        t.sendResponseHeaders(200, file.length());
+
+                        FileInputStream in = new FileInputStream(file);
+
+                        byte[] buffer = new byte[2048];
+
+                        OutputStream out = t.getResponseBody();
+                        int numRead;
+                        do {
+                            numRead = in.read(buffer);
+                            out.write(buffer, 0, numRead);
+                        } while (numRead > 0);
+
                         out.close();
                     }
                 }
