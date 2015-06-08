@@ -189,7 +189,7 @@ public class App
                     }
 
                     Headers requestHeaders = t.getRequestHeaders();
-                    long contentLength = Long.parseLong(requestHeaders.getFirst("Content-Length"), 10);
+                    long contentLength = Long.parseLong(requestHeaders.getFirst("Content-Length"));
                     InputStream in = t.getRequestBody();
                     FileOutputStream out = new FileOutputStream(file);
 
