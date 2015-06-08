@@ -215,6 +215,10 @@ public class App
                     file.delete();
                     respondJson(t, 200,
                         "path", uri);
+                } else {
+
+                    respondJson(t, 405,
+                        "error", "Unsupported method '" + method + "'");
                 }
 
             } else {
