@@ -96,7 +96,7 @@ public class App
                 String response = "{ \"error\": \"Invalid url\", \"url\": \"" + uri + "\" }\n";
                 Headers headers = t.getResponseHeaders();
                 headers.set("Content-Type", "application/json");
-                t.sendResponseHeaders(404, response.length());
+                t.sendResponseHeaders(400, response.length());
                 OutputStream out = t.getResponseBody();
                 out.write(response.getBytes());
                 out.close();
