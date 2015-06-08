@@ -41,7 +41,7 @@ public class App
                     File file = new File(root + uri);
 
                     if (!file.exists()) {
-                        String response = "{ \"error\": \"Path not found\" }\n";
+                        String response = "{ \"error\": \"Path not found\", \"path\": \"" + uri + "\" }\n";
                         Headers headers = t.getResponseHeaders();
                         headers.set("Content-Type", "application/json");
                         t.sendResponseHeaders(404, response.length());
@@ -89,6 +89,7 @@ public class App
                         } while (numRead > 0);
 
                         out.close();
+                        in.close();
                     }
                 }
 
