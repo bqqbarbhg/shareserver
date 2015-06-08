@@ -188,9 +188,6 @@ public class App
                         return;
                     }
 
-                    int bufferSize = 2048;
-                    byte[] buffer = new byte[bufferSize];
-
                     Headers requestHeaders = t.getRequestHeaders();
                     long contentLength = Long.parseLong(requestHeaders.getFirst("Content-Length"), 10);
                     InputStream in = t.getRequestBody();
