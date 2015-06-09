@@ -15,6 +15,8 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.Headers;
 
+import com.google.common.io.BaseEncoding;
+
 /**
  * Lightweight file server: GET, PUT, POST, DELETE on files, GET to list directories, url = path.
  */
@@ -112,6 +114,35 @@ public class App
 
             String uri = t.getRequestURI().toString();
             String method = t.getRequestMethod();
+
+            String auth = t.getRequestHeaders().getFirst("Authorization");
+            if (auth == null) {
+                respondJson(t, 401,
+                    "error", "No authorization found");
+                return;
+            }
+
+            String[] authParts = auth.split(" ", 2);
+            if (authParts.length < 2) {
+                respondJson(t, 401,
+                    "error", "Invalid authorization header");
+                return;
+            }
+
+            if (!authParts[0].equals("Basic")) {
+                respondJson(t, 401,
+                    "error", "Invalid authorization method",
+                    "method", authParts[0]);
+                return;
+            }
+
+            String expected = BaseEncoding.base64().encode("user:pass".getBytes());
+
+            if (!authParts[1].equals(expected)) {
+                respondJson(t, 403,
+                    "error", "Forbidden");
+                return;
+            }
 
             if (uri.matches("[A-Za-z0-9/]*(\\.[A-Za-z0-9]+)?")) {
 
