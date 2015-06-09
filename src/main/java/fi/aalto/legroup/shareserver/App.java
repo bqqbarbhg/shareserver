@@ -35,7 +35,8 @@ public class App
 
         protected static void blockCopy(OutputStream out, InputStream in, long size) throws IOException {
 
-            int bufferSize = 2048;
+            // This should fit in the L1 cache.
+            int bufferSize = 16*1024;
             byte[] buffer = new byte[bufferSize];
 
             long toRead = size;
