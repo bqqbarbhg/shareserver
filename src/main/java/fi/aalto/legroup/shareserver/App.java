@@ -277,6 +277,20 @@ public class App
                             "path", uri);
                     }
 
+                    String tag = Long.toString(file.lastModified(), 36);
+
+                    Headers requestHeaders = t.getRequestHeaders();
+                    String matchTag = requestHeaders.getFirst("If-Match");
+
+                    if (matchTag != null && !matchTag.equals(tag)) {
+
+                        respondJson(t, 412,
+                            "error", "Entity tag differs from expected",
+                            "expected", tag,
+                            "path", uri);
+                        return;
+                    }
+
                     file.delete();
                     respondJson(t, 200,
                         "path", uri);
