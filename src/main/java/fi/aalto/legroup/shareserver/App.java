@@ -10,6 +10,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.InetSocketAddress;
 
+import java.nio.file.Files;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -175,11 +177,23 @@ public class App
 
                         File[] files = file.listFiles();
 
-                        String response = "{ \"directory\": [";
+                        String response = "";
+                        response += "{ \"name\": \"" + file.getName() + "\", ";
+                        response += "\"directory\": true, ";
+                        response += "\"etag\": \"" + Long.toString(file.lastModified(), 36) + "\", ";
+                        response += "\"children\": [\n ";
 
                         for (File child : files) {
 
+                            String mimeType = Files.probeContentType(child.toPath());
                             response += "{ \"name\": \"" + child.getName() + "\", ";
+                            response += "\"directory\": " + child.isDirectory() + ", ";
+                            response += "\"etag\": \"" + Long.toString(child.lastModified(), 36) + "\", ";
+                            if (mimeType != null) {
+                                response += "\"mime\": \"" + mimeType + "\", ";
+                            } else {
+                                response += "\"mime\": null, ";
+                            }
                             response += "\"modified\": \"" + child.lastModified() + "\" },\n";
                         }
                         response = response.substring(0, response.length() - 2);
@@ -195,8 +209,12 @@ public class App
                         
                         long contentLength = file.length();
 
+                        String mimeType = Files.probeContentType(file.toPath());
+
                         Headers headers = t.getResponseHeaders();
-                        headers.set("Content-Type", "image/jpg");
+                        if (mimeType != null) {
+                            headers.set("Content-Type", mimeType);
+                        }
                         headers.set("ETag", tag);
                         t.sendResponseHeaders(200, contentLength);
 
