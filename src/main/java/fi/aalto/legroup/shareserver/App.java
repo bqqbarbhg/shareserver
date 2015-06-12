@@ -164,7 +164,7 @@ public class App
                     Headers requestHeaders = t.getRequestHeaders();
                     String matchTag = requestHeaders.getFirst("If-Match");
 
-                    if (matchTag != null && !matchTag.equals(tag)) {
+                    if (matchTag != null && !matchTag.equals(tag) && !matchTag.equals("*")) {
 
                         respondJson(t, 412,
                             "error", "Entity tag differs from expected",
@@ -258,7 +258,7 @@ public class App
                     Headers requestHeaders = t.getRequestHeaders();
                     String matchTag = requestHeaders.getFirst("If-Match");
 
-                    if (matchTag != null && !matchTag.equals(oldTag)) {
+                    if (matchTag != null && !matchTag.equals(oldTag) && !matchTag.equals("*")) {
 
                         respondJson(t, 412,
                             "error", "Entity tag differs from expected",
@@ -300,7 +300,7 @@ public class App
                     Headers requestHeaders = t.getRequestHeaders();
                     String matchTag = requestHeaders.getFirst("If-Match");
 
-                    if (matchTag != null && !matchTag.equals(tag)) {
+                    if (matchTag != null && !matchTag.equals(tag) && !matchTag.equals("*")) {
 
                         respondJson(t, 412,
                             "error", "Entity tag differs from expected",
