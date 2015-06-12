@@ -157,6 +157,20 @@ public class App
                         return;
                     }
 
+                    String tag = Long.toString(file.lastModified(), 36);
+
+                    Headers requestHeaders = t.getRequestHeaders();
+                    String matchTag = requestHeaders.getFirst("If-Match");
+
+                    if (matchTag != null && !matchTag.equals(tag)) {
+
+                        respondJson(t, 412,
+                            "error", "Entity tag differs from expected",
+                            "expected", tag,
+                            "path", uri);
+                        return;
+                    }
+
                     if (file.isDirectory()) {
 
                         File[] files = file.listFiles();
@@ -183,6 +197,7 @@ public class App
 
                         Headers headers = t.getResponseHeaders();
                         headers.set("Content-Type", "image/jpg");
+                        headers.set("ETag", tag);
                         t.sendResponseHeaders(200, contentLength);
 
                         FileInputStream in = new FileInputStream(file);
@@ -220,7 +235,20 @@ public class App
                         return;
                     }
 
+                    String oldTag = Long.toString(file.lastModified(), 36);
+
                     Headers requestHeaders = t.getRequestHeaders();
+                    String matchTag = requestHeaders.getFirst("If-Match");
+
+                    if (matchTag != null && !matchTag.equals(oldTag)) {
+
+                        respondJson(t, 412,
+                            "error", "Entity tag differs from expected",
+                            "expected", oldTag,
+                            "path", uri);
+                        return;
+                    }
+
                     long contentLength = Long.parseLong(requestHeaders.getFirst("Content-Length"));
                     InputStream in = t.getRequestBody();
                     FileOutputStream out = new FileOutputStream(file);
@@ -229,6 +257,11 @@ public class App
 
                     out.close();
                     in.close();
+
+                    String newTag = Long.toString(file.lastModified(), 36);
+
+                    Headers headers = t.getResponseHeaders();
+                    headers.set("ETag", newTag);
 
                     int status = isOverwrite ? 200 : 201;
                     respondJson(t, status, 
