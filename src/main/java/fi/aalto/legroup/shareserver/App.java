@@ -102,14 +102,56 @@ public class App
             builder.append('}');
             builder.append('\n');
 
-            String response = builder.toString();
+            respondJsonString(t, code, builder.toString());
+        }
+
+        protected static void respondJsonString(HttpExchange t, int code, String json) throws IOException {
 
             Headers headers = t.getResponseHeaders();
             headers.set("Content-Type", "application/json");
-            t.sendResponseHeaders(code, response.length());
+            t.sendResponseHeaders(code, json.length());
             OutputStream out = t.getResponseBody();
-            out.write(response.getBytes());
+            out.write(json.getBytes());
             out.close();
+        }
+
+        String fileJson(File file) throws IOException {
+
+            String result = "";
+
+            int rootLength = new File(root).getAbsolutePath().length();
+            String path = file.getAbsolutePath().substring(rootLength).replace("\\", "/");
+
+            result += "{ \"name\": \"" + file.getName() + "\", ";
+            result += "\"path\": \"" + path + "\", ";
+            result += "\"directory\": " + file.isDirectory() + ", ";
+            result += "\"etag\": \"" + Long.toString(file.lastModified(), 36) + "\", ";
+            result += "\"modified\": \"" + file.lastModified() + "\", \n";
+
+            if (file.isDirectory()) {
+
+                result += "\"children\": [\n ";
+
+                File[] files = file.listFiles();
+                for (File child : files) {
+                    result += fileJson(child) + ", ";
+                }
+
+                result = result.substring(0, result.length() - 2);
+                result += "]";
+
+            } else {
+                String mimeType = Files.probeContentType(file.toPath());
+                if (mimeType != null) {
+                    result += "\"mime\": \"" + mimeType + "\"";
+                } else {
+                    result += "\"mime\": null";
+                }
+            }
+
+            result += "}";
+
+            return result;
         }
 
         public void handle(HttpExchange t) throws IOException {
@@ -175,36 +217,9 @@ public class App
 
                     if (file.isDirectory()) {
 
-                        File[] files = file.listFiles();
+                        String response = fileJson(file);
+                        respondJsonString(t, 200, response);
 
-                        String response = "";
-                        response += "{ \"name\": \"" + file.getName() + "\", ";
-                        response += "\"directory\": true, ";
-                        response += "\"etag\": \"" + Long.toString(file.lastModified(), 36) + "\", ";
-                        response += "\"children\": [\n ";
-
-                        for (File child : files) {
-
-                            String mimeType = Files.probeContentType(child.toPath());
-                            response += "{ \"name\": \"" + child.getName() + "\", ";
-                            response += "\"directory\": " + child.isDirectory() + ", ";
-                            response += "\"etag\": \"" + Long.toString(child.lastModified(), 36) + "\", ";
-                            if (mimeType != null) {
-                                response += "\"mime\": \"" + mimeType + "\", ";
-                            } else {
-                                response += "\"mime\": null, ";
-                            }
-                            response += "\"modified\": \"" + child.lastModified() + "\" },\n";
-                        }
-                        response = response.substring(0, response.length() - 2);
-                        response += "] }\n";
-
-                        Headers headers = t.getResponseHeaders();
-                        headers.set("Content-Type", "application/json");
-                        t.sendResponseHeaders(200, response.length());
-                        OutputStream out = t.getResponseBody();
-                        out.write(response.getBytes());
-                        out.close();
                     } else {
                         
                         long contentLength = file.length();
@@ -226,6 +241,34 @@ public class App
                         out.close();
                         in.close();
                     }
+                } else if (method.equals("PROPFIND")) {
+
+                    File file = new File(root + uri);
+
+                    if (!file.exists()) {
+                        respondJson(t, 404,
+                            "error", "File does not exist",
+                            "path", uri);
+                        return;
+                    }
+
+                    String tag = Long.toString(file.lastModified(), 36);
+
+                    Headers requestHeaders = t.getRequestHeaders();
+                    String matchTag = requestHeaders.getFirst("If-Match");
+
+                    if (matchTag != null && !matchTag.equals(tag) && !matchTag.equals("*")) {
+
+                        respondJson(t, 412,
+                            "error", "Entity tag differs from expected",
+                            "expected", tag,
+                            "path", uri);
+                        return;
+                    }
+
+                    String response = fileJson(file);
+                    respondJsonString(t, 200, response);
+
                 } else if (method.equals("PUT") || method.equals("POST")) {
 
                     boolean canOverwrite = method.equals("PUT");
@@ -282,9 +325,8 @@ public class App
                     headers.set("ETag", newTag);
 
                     int status = isOverwrite ? 200 : 201;
-                    respondJson(t, status, 
-                        "overwrite", isOverwrite,
-                        "path", uri);
+                    respondJsonString(t, status, fileJson(file));
+
                 } else if (method.equals("DELETE")) {
 
                     File file = new File(root + uri);
@@ -315,7 +357,8 @@ public class App
                 } else {
 
                     respondJson(t, 405,
-                        "error", "Unsupported method '" + method + "'");
+                        "error", "Unsupported method",
+                        "method", method);
                 }
 
             } else {
