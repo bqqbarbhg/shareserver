@@ -159,6 +159,7 @@ public class App
             String uri = t.getRequestURI().toString();
             String method = t.getRequestMethod();
 
+            /*
             String auth = t.getRequestHeaders().getFirst("Authorization");
             if (auth == null) {
                 respondJson(t, 401,
@@ -188,7 +189,9 @@ public class App
                 return;
             }
 
-            if (uri.matches("[A-Za-z0-9/]*(\\.[A-Za-z0-9]+)?")) {
+            */
+
+            if (uri.matches("[A-Za-z0-9/\\-]*(\\.[A-Za-z0-9]+)?")) {
 
                 if (method.equals("GET")) {
 
