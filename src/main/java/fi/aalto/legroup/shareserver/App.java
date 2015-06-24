@@ -10,6 +10,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.InetSocketAddress;
 
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+
 import java.nio.file.Files;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -24,6 +29,14 @@ import com.google.common.io.BaseEncoding;
  */
 public class App 
 {
+
+    protected static final SimpleDateFormat httpDateFormat;
+
+    static {
+        httpDateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzz", Locale.ENGLISH);
+        httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+    }
+
     public static void main(String[] args) throws IOException
     {
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
@@ -233,7 +246,11 @@ public class App
                         if (mimeType != null) {
                             headers.set("Content-Type", mimeType);
                         }
+
+                        Date lastModified = new Date(file.lastModified());
+
                         headers.set("ETag", tag);
+                        headers.set("Last-Modified", httpDateFormat.format(lastModified));
                         t.sendResponseHeaders(200, contentLength);
 
                         FileInputStream in = new FileInputStream(file);
@@ -323,9 +340,11 @@ public class App
                     in.close();
 
                     String newTag = Long.toString(file.lastModified(), 36);
+                    Date lastModified = new Date(file.lastModified());
 
                     Headers headers = t.getResponseHeaders();
                     headers.set("ETag", newTag);
+                    headers.set("Last-Modified", httpDateFormat.format(lastModified));
 
                     int status = isOverwrite ? 200 : 201;
                     respondJsonString(t, status, fileJson(file));
