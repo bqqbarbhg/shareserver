@@ -33,7 +33,7 @@ public class App
     protected static final SimpleDateFormat httpDateFormat;
 
     static {
-        httpDateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzz", Locale.ENGLISH);
+        httpDateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzz", Locale.US);
         httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
